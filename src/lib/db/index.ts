@@ -6,7 +6,7 @@ import type {
   Contact,
   FormDefinition,
 } from "@/lib/forms/schema";
-import type { Submission } from "./schema";
+import type { PendingVolunteer, Submission } from "./schema";
 
 export type StoredSubmission = {
   id: string;
@@ -27,6 +27,22 @@ export type StoredSubmission = {
   emailTemplate?: string | null;
 };
 
+export type StoredPendingVolunteer = {
+  id: string;
+  submissionId: string | null;
+  pcoPersonId: string;
+  pcoTeamId: string;
+  teamKey: string;
+  personName: string | null;
+  personEmail: string | null;
+  answersJson: Answers | null;
+  status: string;
+  acceptedPositionId: string | null;
+  acceptedAt: Date | null;
+  reviewedByEmail: string | null;
+  createdAt: Date;
+};
+
 const memory = {
   submissions: [] as StoredSubmission[],
   emailEvents: [] as {
@@ -38,6 +54,7 @@ const memory = {
     error: string | null;
     sentAt: Date;
   }[],
+  pendingVolunteers: [] as StoredPendingVolunteer[],
   byIdempotency: new Map<string, string>(),
 };
 
@@ -213,6 +230,160 @@ export async function listSubmissions(limit = 50): Promise<StoredSubmission[]> {
   return withEmail;
 }
 
+export async function insertPendingVolunteers(
+  rows: Array<{
+    submissionId: string;
+    pcoPersonId: string;
+    pcoTeamId: string;
+    teamKey: string;
+    personName: string;
+    personEmail: string;
+    answers: Answers;
+  }>,
+): Promise<StoredPendingVolunteer[]> {
+  if (rows.length === 0) return [];
+
+  const db = getDb();
+  if (!db) {
+    const created = rows.map((input) => {
+      const row: StoredPendingVolunteer = {
+        id: newId(),
+        submissionId: input.submissionId,
+        pcoPersonId: input.pcoPersonId,
+        pcoTeamId: input.pcoTeamId,
+        teamKey: input.teamKey,
+        personName: input.personName || null,
+        personEmail: input.personEmail || null,
+        answersJson: input.answers,
+        status: "pending",
+        acceptedPositionId: null,
+        acceptedAt: null,
+        reviewedByEmail: null,
+        createdAt: new Date(),
+      };
+      memory.pendingVolunteers.unshift(row);
+      return row;
+    });
+    return created;
+  }
+
+  const inserted = await db
+    .insert(schema.pendingVolunteers)
+    .values(
+      rows.map((input) => ({
+        submissionId: input.submissionId,
+        pcoPersonId: input.pcoPersonId,
+        pcoTeamId: input.pcoTeamId,
+        teamKey: input.teamKey,
+        personName: input.personName || null,
+        personEmail: input.personEmail || null,
+        answersJson: input.answers,
+        status: "pending",
+      })),
+    )
+    .returning();
+
+  return inserted.map(mapPending);
+}
+
+export async function listPendingVolunteersForTeam(input: {
+  pcoTeamId?: string;
+  teamKey?: string;
+  status?: string;
+  limit?: number;
+}): Promise<StoredPendingVolunteer[]> {
+  const status = input.status ?? "pending";
+  const limit = input.limit ?? 100;
+  const db = getDb();
+
+  if (!db) {
+    return memory.pendingVolunteers
+      .filter((row) => {
+        if (row.status !== status) return false;
+        if (input.pcoTeamId && row.pcoTeamId === input.pcoTeamId) return true;
+        if (input.teamKey && row.teamKey === input.teamKey) return true;
+        if (!input.pcoTeamId && !input.teamKey) return true;
+        return false;
+      })
+      .slice(0, limit);
+  }
+
+  const { eq, or, and, desc } = await import("drizzle-orm");
+  const filters = [eq(schema.pendingVolunteers.status, status)];
+
+  if (input.pcoTeamId && input.teamKey) {
+    filters.push(
+      or(
+        eq(schema.pendingVolunteers.pcoTeamId, input.pcoTeamId),
+        eq(schema.pendingVolunteers.teamKey, input.teamKey),
+      )!,
+    );
+  } else if (input.pcoTeamId) {
+    filters.push(eq(schema.pendingVolunteers.pcoTeamId, input.pcoTeamId));
+  } else if (input.teamKey) {
+    filters.push(eq(schema.pendingVolunteers.teamKey, input.teamKey));
+  }
+
+  const rows = await db
+    .select()
+    .from(schema.pendingVolunteers)
+    .where(and(...filters))
+    .orderBy(desc(schema.pendingVolunteers.createdAt))
+    .limit(limit);
+
+  return rows.map(mapPending);
+}
+
+export async function getPendingVolunteer(
+  id: string,
+): Promise<StoredPendingVolunteer | null> {
+  const db = getDb();
+  if (!db) {
+    return memory.pendingVolunteers.find((p) => p.id === id) ?? null;
+  }
+  const { eq } = await import("drizzle-orm");
+  const rows = await db
+    .select()
+    .from(schema.pendingVolunteers)
+    .where(eq(schema.pendingVolunteers.id, id))
+    .limit(1);
+  return rows[0] ? mapPending(rows[0]) : null;
+}
+
+export async function updatePendingVolunteerStatus(input: {
+  id: string;
+  status: "accepted" | "dismissed";
+  reviewedByEmail: string;
+  acceptedPositionId?: string | null;
+}): Promise<StoredPendingVolunteer | null> {
+  const db = getDb();
+  const acceptedAt = input.status === "accepted" ? new Date() : null;
+
+  if (!db) {
+    const row = memory.pendingVolunteers.find((p) => p.id === input.id);
+    if (!row) return null;
+    row.status = input.status;
+    row.reviewedByEmail = input.reviewedByEmail;
+    row.acceptedPositionId = input.acceptedPositionId ?? null;
+    row.acceptedAt = acceptedAt;
+    return row;
+  }
+
+  const { eq } = await import("drizzle-orm");
+  const updated = await db
+    .update(schema.pendingVolunteers)
+    .set({
+      status: input.status,
+      reviewedByEmail: input.reviewedByEmail,
+      acceptedPositionId: input.acceptedPositionId ?? null,
+      acceptedAt,
+    })
+    .where(eq(schema.pendingVolunteers.id, input.id))
+    .returning();
+
+  return updated[0] ? mapPending(updated[0]) : null;
+}
+
 function mapRow(row: Submission): StoredSubmission {
   return {
     id: row.id,
@@ -228,6 +399,24 @@ function mapRow(row: Submission): StoredSubmission {
     pcoPersonId: row.pcoPersonId,
     status: row.status,
     idempotencyKey: row.idempotencyKey,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapPending(row: PendingVolunteer): StoredPendingVolunteer {
+  return {
+    id: row.id,
+    submissionId: row.submissionId,
+    pcoPersonId: row.pcoPersonId,
+    pcoTeamId: row.pcoTeamId,
+    teamKey: row.teamKey,
+    personName: row.personName,
+    personEmail: row.personEmail,
+    answersJson: (row.answersJson as Answers | null) ?? null,
+    status: row.status,
+    acceptedPositionId: row.acceptedPositionId,
+    acceptedAt: row.acceptedAt,
+    reviewedByEmail: row.reviewedByEmail,
     createdAt: row.createdAt,
   };
 }

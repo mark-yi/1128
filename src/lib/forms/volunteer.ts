@@ -1,12 +1,14 @@
 import { brand } from "@/lib/brand";
+import { volunteerAreaOptions } from "@/lib/teams";
 import type { FormDefinition } from "./schema";
 
 export const volunteerForm: FormDefinition = {
   schemaVersion: 1,
-  version: 1,
+  version: 4,
   slug: "volunteer",
   title: "Serve with us",
-  description: "Tell us where you’d love to help — we’ll follow up.",
+  description:
+    "After Pathway — tell us where you’d love to help. Your team lead will place you and you’ll become a member.",
   active: true,
   pco: {
     source: "Website — Volunteer Form",
@@ -14,8 +16,8 @@ export const volunteerForm: FormDefinition = {
     includeAnswers: true,
   },
   success: {
-    title: "Thank you for offering to serve",
-    body: "Your willingness matters. A ministry lead will reach out soon with next steps.",
+    title: "You’re on the list",
+    body: "Your team lead will review, place you on a team, and get you plugged in.",
     secondary: `${brand.service.when} · La Habra`,
     ctaLabel: "Back to 1128",
     ctaHref: brand.siteUrl,
@@ -26,7 +28,7 @@ export const volunteerForm: FormDefinition = {
     preview: "Thanks for offering to serve at 1128.",
     heading: "Thank you, {{firstName}}.",
     body: [
-      "We’re grateful you want to serve with us. A ministry lead will follow up soon with next steps and how to get plugged in.",
+      "We’re grateful you want to serve with us. Your team lead will follow up soon — once you’re placed on a team, you’re a member.",
       "Until then — come worship with us Sunday at 11:45 AM.",
     ],
     ctaLabel: "Visit 1128",
@@ -38,7 +40,16 @@ export const volunteerForm: FormDefinition = {
       id: "welcome",
       type: "statement",
       title: "Serve with 1128",
-      body: "We reflect God’s love by serving one another. A few questions and we’ll connect you with the right team.",
+      body: "For people who’ve completed Pathway. We’ll look you up in Planning Center, then connect you with a team.",
+    },
+    {
+      id: "email",
+      type: "email",
+      role: "email",
+      title: "What’s your email?",
+      help: "Use the email we already have on file.",
+      placeholder: "name@email.com",
+      required: true,
     },
     {
       id: "first_name",
@@ -57,14 +68,6 @@ export const volunteerForm: FormDefinition = {
       required: true,
     },
     {
-      id: "email",
-      type: "email",
-      role: "email",
-      title: "Email?",
-      placeholder: "name@email.com",
-      required: true,
-    },
-    {
       id: "phone",
       type: "phone",
       role: "phone",
@@ -78,15 +81,7 @@ export const volunteerForm: FormDefinition = {
       title: "Where would you like to serve?",
       help: "Pick as many as you want.",
       required: true,
-      options: [
-        { value: "worship", label: "Worship / band" },
-        { value: "production", label: "Production / tech" },
-        { value: "hospitality", label: "Hospitality / welcome" },
-        { value: "kids", label: "Kids ministry" },
-        { value: "prayer", label: "Prayer ministry" },
-        { value: "setup", label: "Setup / teardown" },
-        { value: "other", label: "Wherever there’s need" },
-      ],
+      options: volunteerAreaOptions(),
     },
     {
       id: "experience",

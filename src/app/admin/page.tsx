@@ -31,6 +31,12 @@ export default async function AdminPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href="/teams"
+              className="text-sm text-[var(--color-muted)] underline-offset-4 hover:underline"
+            >
+              Teams
+            </Link>
             <Link href="/" className="text-sm text-[var(--color-muted)] underline-offset-4 hover:underline">
               Forms
             </Link>

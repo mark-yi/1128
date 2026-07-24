@@ -15,10 +15,13 @@ import {
 import {
   findSubmissionByIdempotencyKey,
   insertEmailEvent,
+  insertPendingVolunteers,
   insertSubmission,
   isUsingMemoryStore,
 } from "@/lib/db";
 import { upsertPerson } from "@/lib/pco/client";
+import { assertVolunteerEligible } from "@/lib/pco/eligibility";
+import { resolveTeamIdsFromAreas } from "@/lib/teams";
 import { sendFollowUpEmail } from "@/lib/email/send";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -27,6 +30,7 @@ const payloadSchema = z.object({
   answers: z.record(z.string(), z.unknown()),
   idempotencyKey: z.string().min(8).max(128),
   website: z.string().optional(), // honeypot
+  pcoPersonId: z.string().optional(),
 });
 
 export type SubmitResult =
@@ -42,6 +46,7 @@ export async function submitFormAction(raw: {
   answers: Answers;
   idempotencyKey: string;
   website?: string;
+  pcoPersonId?: string;
 }): Promise<SubmitResult> {
   const parsed = payloadSchema.safeParse(raw);
   if (!parsed.success) {
@@ -100,14 +105,24 @@ export async function submitFormAction(raw: {
     return { ok: false, error: "Email is required" };
   }
 
+  // Volunteer form: must already exist in PCO
+  let gatedPersonId: string | null = parsed.data.pcoPersonId ?? null;
+  if (form.slug === "volunteer") {
+    const eligibility = await assertVolunteerEligible(contact.email);
+    if (!eligibility.ok) {
+      return { ok: false, error: eligibility.message };
+    }
+    gatedPersonId = eligibility.person.id;
+  }
+
   const notes = extractNotes(form, answers);
   const answerSummary =
     form.pco.includeAnswers === false
       ? ""
       : formatAnswersForNotes(form, answers);
 
-  let pcoPersonId: string | null = null;
-  let pcoMocked = true;
+  let pcoPersonId: string | null = gatedPersonId;
+  let pcoMocked = !gatedPersonId;
 
   try {
     const pco = await upsertPerson({
@@ -146,6 +161,29 @@ export async function submitFormAction(raw: {
     status: pcoPersonId ? "synced" : "received",
     idempotencyKey: parsed.data.idempotencyKey,
   });
+
+  if (form.slug === "volunteer" && pcoPersonId) {
+    const areasRaw = answers.areas;
+    const areas = Array.isArray(areasRaw)
+      ? areasRaw.filter((a): a is string => typeof a === "string")
+      : typeof areasRaw === "string"
+        ? [areasRaw]
+        : [];
+    const teams = resolveTeamIdsFromAreas(areas);
+    if (teams.length > 0) {
+      await insertPendingVolunteers(
+        teams.map((team) => ({
+          submissionId: submission.id,
+          pcoPersonId: pcoPersonId!,
+          pcoTeamId: team.pcoTeamId,
+          teamKey: team.teamKey,
+          personName: contact.fullName,
+          personEmail: contact.email,
+          answers,
+        })),
+      );
+    }
+  }
 
   let emailMocked = true;
   if (contact.email) {

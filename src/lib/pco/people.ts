@@ -99,11 +99,20 @@ export async function getPerson(personId: string): Promise<PcoPerson | null> {
 
 export async function findPersonByEmail(email: string): Promise<PcoPerson | null> {
   if (!email || !isPcoConfigured()) return null;
-  const matches = await searchPeople(email, 5);
-  const exact = matches.find(
-    (p) => p.email?.toLowerCase() === email.trim().toLowerCase(),
-  );
-  return exact ?? matches[0] ?? null;
+  const needle = email.trim().toLowerCase();
+  const matches = await searchPeople(needle, 10);
+
+  for (const candidate of matches) {
+    const full = await getPerson(candidate.id);
+    if (full?.email?.toLowerCase() === needle) return full;
+  }
+
+  // Fallback: first search hit if email include-matching was messy
+  for (const candidate of matches) {
+    if (candidate.email?.toLowerCase() === needle) return candidate;
+  }
+
+  return null;
 }
 
 export type UpsertPersonInput = {
@@ -240,6 +249,33 @@ async function createPersonNote(
 export function pcoPersonUrl(personId: string) {
   if (personId.startsWith("mock_")) return null;
   return `https://people.planningcenteronline.com/people/${personId}`;
+}
+
+/**
+ * Promote (or set) People membership status.
+ * Used when a leader accepts a pending volunteer onto a team → Member.
+ */
+export async function setPersonMembership(
+  personId: string,
+  membership: string,
+): Promise<{ mocked: boolean }> {
+  if (!isPcoConfigured() || personId.startsWith("mock_")) {
+    console.info("[pco] mock set membership", { personId, membership });
+    return { mocked: true };
+  }
+
+  await pcoRequest("people", `/people/${personId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      data: {
+        type: "Person",
+        id: personId,
+        attributes: { membership },
+      },
+    }),
+  });
+
+  return { mocked: false };
 }
 
 /** Recent people — useful for “new members” leader queues once filtered by list/tag. */

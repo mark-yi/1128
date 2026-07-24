@@ -1,0 +1,132 @@
+.teams-app {
+  --teams-bg: #ffffff;
+  --teams-panel: #f6f6f6;
+  --teams-line: #ebebeb;
+  --teams-line-strong: #e2e2e2;
+  --teams-text: #0a0a0a;
+  --teams-muted: #6b6b6b;
+  --teams-faint: #9b9b9b;
+  --teams-accent: #0a0a0a;
+  --teams-link: #2563eb;
+  --teams-danger: #dc2626;
+  --teams-success: #16a34a;
+  --teams-radius: 8px;
+  --font-teams: var(--font-teams-sans), ui-sans-serif, system-ui, sans-serif;
+
+  background: var(--teams-bg);
+  color: var(--teams-text);
+  font-family: var(--font-teams);
+}
+
+.teams-app a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.teams-shell {
+  display: grid;
+  min-height: 100dvh;
+  grid-template-columns: 240px 1fr;
+}
+
+@media (max-width: 840px) {
+  .teams-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.teams-sidebar {
+  border-right: 1px solid var(--teams-line);
+  background: var(--teams-panel);
+  padding: 1.25rem 0.85rem;
+}
+
+.teams-main {
+  padding: 1.75rem 1.5rem 3rem;
+}
+
+@media (min-width: 840px) {
+  .teams-main {
+    padding: 2rem 2.25rem 3.5rem;
+  }
+}
+
+.teams-card {
+  border: 1px solid var(--teams-line);
+  border-radius: var(--teams-radius);
+  background: var(--teams-bg);
+}
+
+.teams-btn {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 6px;
+  border: 1px solid var(--teams-line-strong);
+  background: var(--teams-bg);
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--teams-text);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.teams-btn:hover {
+  background: var(--teams-panel);
+}
+
+.teams-btn-primary {
+  border-color: var(--teams-accent);
+  background: var(--teams-accent);
+  color: #fff;
+}
+
+.teams-btn-primary:hover {
+  background: #262626;
+}
+
+.teams-btn-danger {
+  color: var(--teams-danger);
+}
+
+.teams-input,
+.teams-select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--teams-line-strong);
+  border-radius: 6px;
+  background: var(--teams-bg);
+  padding: 0 0.7rem;
+  font-size: 0.875rem;
+  color: var(--teams-text);
+  outline: none;
+}
+
+.teams-input:focus,
+.teams-select:focus {
+  border-color: #a3a3a3;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.06);
+}
+
+.teams-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--teams-faint);
+}
+
+.teams-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--teams-line);
+  padding: 0.85rem 1rem;
+}
+
+.teams-row:first-child {
+  border-top: 0;
+}

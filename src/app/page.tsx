@@ -49,6 +49,10 @@ export default function HomePage() {
           <Link href="/admin" className="underline underline-offset-4">
             view submissions
           </Link>
+          {" · "}
+          <Link href="/teams" className="underline underline-offset-4">
+            team leaders
+          </Link>
         </p>
       </div>
     </div>

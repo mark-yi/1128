@@ -67,6 +67,7 @@ Admin: allowlisted `ADMIN_EMAILS` + `ADMIN_PASSWORD` (default `1128-admin`).
 |---|---|
 | `DATABASE_URL` | Postgres. Omit → in-memory ledger |
 | `PCO_APP_ID` / `PCO_SECRET` | Planning Center PAT. Omit → mock |
+| `PCO_SERVICE_TYPE_ID` | Services service type for plans/teams |
 | `RESEND_API_KEY` / `RESEND_FROM` | Email. Omit → console mock |
 | `AUTH_SECRET` | Admin JWT cookie |
 | `ADMIN_PASSWORD` / `ADMIN_EMAILS` | Staff login |
@@ -92,3 +93,13 @@ PCO is the system of record for **people**, **teams**, and **Sunday schedules**.
 2. **Schedule** → `PlanPerson` via `team_members` — this Sunday’s plan (“serve hospitality next week”)
 
 Set `PCO_APP_ID`, `PCO_SECRET`, and `PCO_SERVICE_TYPE_ID`, then leader actions are ready.
+
+### Pathway → serve → Member
+
+1. Person completes Pathway (still Newcomer / Regular Attender in PCO)
+2. They fill `/f/volunteer` — must already exist in People (email match)
+3. Leader Accept on `/teams` → add to roster **and** set membership → **Member**
+
+Map form areas → Services team ids in `src/lib/teams.ts`.
+
+Leaders sign in at `/teams/login` (same password as admin). Staff (`ADMIN_EMAILS`) see all teams; everyone else is scoped via PCO **TeamLeader** records.

@@ -8,9 +8,15 @@ import {
   listOpenVolunteerNeeds,
   listUpcomingSundays,
 } from "@/lib/pco/workflows";
-import { listTeams, listTeamPositions } from "@/lib/pco/services";
+import {
+  listTeamLeaders,
+  listTeamRoster,
+  listTeams,
+  listTeamPositions,
+  listTeamsLedByPerson,
+} from "@/lib/pco/services";
 
-/** Server actions for upcoming team-leader UI (ready once PAT is set). */
+/** Server actions for team-leader UI. */
 
 export async function getUpcomingSundaysAction(limit = 4) {
   return listUpcomingSundays(limit);
@@ -34,6 +40,18 @@ export async function listTeamsAction(serviceTypeId?: string) {
 
 export async function listPositionsAction(serviceTypeId: string, teamId: string) {
   return listTeamPositions(serviceTypeId, teamId);
+}
+
+export async function listTeamRosterAction(teamId: string) {
+  return listTeamRoster(teamId);
+}
+
+export async function listTeamLeadersAction(teamId: string) {
+  return listTeamLeaders(teamId);
+}
+
+export async function listTeamsLedByPersonAction(personId: string) {
+  return listTeamsLedByPerson(personId);
 }
 
 export async function addMemberToTeamAction(input: {

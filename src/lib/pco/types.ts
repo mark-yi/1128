@@ -41,6 +41,15 @@ export type PcoTeamRosterAssignment = {
   positionName?: string;
 };
 
+/** Leader of a specific Services team. */
+export type PcoTeamLeader = {
+  id: string;
+  personId: string;
+  teamId: string;
+  person?: PcoPerson;
+  team?: PcoTeam;
+};
+
 export type PcoPlan = {
   id: string;
   serviceTypeId: string;

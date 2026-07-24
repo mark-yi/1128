@@ -59,5 +59,26 @@ export const emailEvents = pgTable("email_events", {
   sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * Pending Pathway → serve signups waiting for team leader accept.
+ * Accept writes roster + promotes membership to Member.
+ */
+export const pendingVolunteers = pgTable("pending_volunteers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  submissionId: uuid("submission_id").references(() => submissions.id),
+  pcoPersonId: varchar("pco_person_id", { length: 64 }).notNull(),
+  pcoTeamId: varchar("pco_team_id", { length: 64 }).notNull().default(""),
+  teamKey: varchar("team_key", { length: 64 }).notNull(),
+  personName: text("person_name"),
+  personEmail: varchar("person_email", { length: 320 }),
+  answersJson: jsonb("answers_json"),
+  status: varchar("status", { length: 32 }).notNull().default("pending"),
+  acceptedPositionId: varchar("accepted_position_id", { length: 64 }),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  reviewedByEmail: varchar("reviewed_by_email", { length: 320 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export type Submission = typeof submissions.$inferSelect;
 export type EmailEvent = typeof emailEvents.$inferSelect;
+export type PendingVolunteer = typeof pendingVolunteers.$inferSelect;

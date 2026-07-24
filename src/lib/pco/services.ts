@@ -6,6 +6,7 @@ import type {
   PcoPlanTime,
   PcoServiceType,
   PcoTeam,
+  PcoTeamLeader,
   PcoTeamPosition,
   PcoTeamRosterAssignment,
 } from "./types";
@@ -355,4 +356,107 @@ export async function schedulePersonOnPlan(input: {
 
 export function pcoPlanUrl(serviceTypeId: string, planId: string) {
   return `https://services.planningcenteronline.com/service_types/${serviceTypeId}/plans/${planId}`;
+}
+
+/**
+ * Leaders assigned to a team in Services (TeamLeader records).
+ * GET /teams/{team_id}/team_leaders
+ */
+export async function listTeamLeaders(teamId: string): Promise<PcoTeamLeader[]> {
+  if (!isPcoConfigured() || !teamId) return [];
+
+  const res = await pcoRequest<PcoListResponse<Record<string, never>>>(
+    "services",
+    `/teams/${teamId}/team_leaders${qs({
+      include: "people,team",
+      per_page: 100,
+    })}`,
+  );
+
+  return (res.data ?? []).map((row) => {
+    const personRel = row.relationships?.person?.data;
+    const teamRel = row.relationships?.team?.data;
+    const personId =
+      !Array.isArray(personRel) && personRel ? personRel.id : "";
+    const tid = !Array.isArray(teamRel) && teamRel ? teamRel.id : teamId;
+
+    const personInc = (res.included ?? []).find(
+      (i) => i.type === "Person" && i.id === personId,
+    );
+    // Services may include as "Person"
+    const attrs = personInc?.attributes as
+      | { first_name?: string; last_name?: string; name?: string }
+      | undefined;
+
+    const teamInc = (res.included ?? []).find(
+      (i) => i.type === "Team" && i.id === tid,
+    );
+    const teamAttrs = teamInc?.attributes as
+      | { name?: string; archived_at?: string | null }
+      | undefined;
+
+    return {
+      id: row.id,
+      personId,
+      teamId: tid,
+      person: personInc
+        ? {
+            id: personId,
+            firstName: attrs?.first_name ?? "",
+            lastName: attrs?.last_name ?? "",
+            name:
+              attrs?.name ||
+              [attrs?.first_name, attrs?.last_name].filter(Boolean).join(" "),
+          }
+        : undefined,
+      team: teamInc
+        ? {
+            id: tid,
+            name: teamAttrs?.name ?? "Team",
+            serviceTypeId: "",
+            archivedAt: teamAttrs?.archived_at,
+          }
+        : undefined,
+    };
+  });
+}
+
+/**
+ * Teams this person leads (via TeamLeader associations).
+ * GET /people/{person_id}/team_leaders
+ */
+export async function listTeamsLedByPerson(
+  personId: string,
+): Promise<PcoTeam[]> {
+  if (!isPcoConfigured() || !personId) return [];
+
+  const res = await pcoRequest<PcoListResponse<Record<string, never>>>(
+    "services",
+    `/people/${personId}/team_leaders${qs({
+      include: "team",
+      per_page: 100,
+      filter: "not_archived,not_deleted",
+    })}`,
+  );
+
+  const teams: PcoTeam[] = [];
+  for (const row of res.data ?? []) {
+    const teamRel = row.relationships?.team?.data;
+    const teamId = !Array.isArray(teamRel) && teamRel ? teamRel.id : "";
+    if (!teamId) continue;
+    const teamInc = (res.included ?? []).find(
+      (i) => i.type === "Team" && i.id === teamId,
+    );
+    const attrs = teamInc?.attributes as
+      | { name?: string; archived_at?: string | null }
+      | undefined;
+    if (attrs?.archived_at) continue;
+    teams.push({
+      id: teamId,
+      name: attrs?.name ?? "Team",
+      serviceTypeId: "",
+      archivedAt: attrs?.archived_at,
+    });
+  }
+  return teams;
 }

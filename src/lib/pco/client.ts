@@ -11,6 +11,7 @@ export {
   getPerson,
   findPersonByEmail,
   listPeople,
+  setPersonMembership,
 } from "./people";
 
 export type { UpsertPersonInput } from "./people";

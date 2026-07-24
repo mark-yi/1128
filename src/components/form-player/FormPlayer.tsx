@@ -40,8 +40,9 @@ import { ChoiceField } from "./fields/ChoiceField";
 import { StatementField } from "./fields/StatementField";
 import { SuccessScreen } from "./SuccessScreen";
 import { submitFormAction } from "@/actions/submit-form";
+import { checkVolunteerEligibilityAction } from "@/actions/volunteer-eligibility";
 
-type Phase = "playing" | "submitting" | "success" | "error";
+type Phase = "playing" | "submitting" | "success" | "error" | "blocked";
 
 function subscribeReducedMotion(onStoreChange: () => void) {
   const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -86,10 +87,13 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
   const [shakeKey, setShakeKey] = useState(0);
   const [phase, setPhase] = useState<Phase>("playing");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [blockMessage, setBlockMessage] = useState<string | null>(null);
+  const [pcoPersonId, setPcoPersonId] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const idempotencyKey = useRef(newIdempotencyKey(form.slug));
   const formId = useId();
+  const isVolunteer = form.slug === "volunteer";
 
   const steps = form.steps;
   const step = steps[index];
@@ -146,6 +150,7 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
           answers: payload,
           idempotencyKey: idempotencyKey.current,
           website: honeypot,
+          pcoPersonId: pcoPersonId ?? undefined,
         });
         if (!result.ok) {
           setSubmitError(result.error);
@@ -158,7 +163,30 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
         setPhase("error");
       }
     },
-    [answers, form.slug, honeypot],
+    [answers, form.slug, honeypot, pcoPersonId],
+  );
+
+  const gateVolunteerEmail = useCallback(
+    async (email: string, currentAnswers: Answers) => {
+      const result = await checkVolunteerEligibilityAction(email);
+      if (!result.ok) {
+        setBlockMessage(result.message);
+        setPhase("blocked");
+        return { ok: false as const };
+      }
+
+      setPcoPersonId(result.person.id);
+      const next: Answers = { ...currentAnswers };
+      if (result.person.firstName && !next.first_name) {
+        next.first_name = result.person.firstName;
+      }
+      if (result.person.lastName && !next.last_name) {
+        next.last_name = result.person.lastName;
+      }
+      setAnswers(next);
+      return { ok: true as const, answers: next };
+    },
+    [],
   );
 
   const advance = useCallback(async () => {
@@ -168,12 +196,34 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
       failValidation(result.message);
       return;
     }
+
+    // Pathway flow: must already exist in PCO (Member promotion happens on Accept)
+    if (isVolunteer && step.id === "email" && typeof value === "string") {
+      const gated = await gateVolunteerEmail(value, {
+        ...answers,
+        [step.id]: value,
+      });
+      if (!gated.ok) return;
+    }
+
     if (index >= total - 1) {
       await submit();
       return;
     }
     goTo(index + 1, 1);
-  }, [failValidation, goTo, index, phase, step, submit, total, value]);
+  }, [
+    answers,
+    failValidation,
+    gateVolunteerEmail,
+    goTo,
+    index,
+    isVolunteer,
+    phase,
+    step,
+    submit,
+    total,
+    value,
+  ]);
 
   const back = useCallback(() => {
     if (phase !== "playing") return;
@@ -270,6 +320,43 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
   if (phase === "success") {
     return (
       <SuccessScreen form={form} name={contact.firstName || contact.fullName} />
+    );
+  }
+
+  if (phase === "blocked") {
+    return (
+      <div className="form-shell flex min-h-dvh flex-col items-center justify-center px-5 py-16">
+        <div className="w-full max-w-md text-center">
+          <p className="font-display text-2xl text-[var(--color-accent-dark)]">
+            {brand.name}
+          </p>
+          <h1 className="mt-4 font-display text-3xl text-[var(--color-text)]">
+            We couldn’t find you
+          </h1>
+          <p className="mt-4 text-[var(--color-text-soft)]">
+            {blockMessage ??
+              "Finish Pathway first, then come back with the email we have on file."}
+          </p>
+          <button
+            type="button"
+            className="btn-primary mt-8 inline-flex min-h-11 items-center justify-center px-6"
+            onClick={() => {
+              setPhase("playing");
+              setBlockMessage(null);
+              setPcoPersonId(null);
+              setIndex(steps.findIndex((s) => s.id === "email") || 0);
+            }}
+          >
+            Try another email
+          </button>
+          <a
+            href={brand.siteUrl}
+            className="mt-4 block text-sm text-[var(--color-muted)] underline-offset-4 hover:underline"
+          >
+            Back to 1128
+          </a>
+        </div>
+      </div>
     );
   }
 
