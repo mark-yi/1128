@@ -2,6 +2,8 @@ import { brand } from "@/lib/brand";
 import type { FormDefinition } from "./schema";
 
 export const volunteerForm: FormDefinition = {
+  schemaVersion: 1,
+  version: 1,
   slug: "volunteer",
   title: "Serve with us",
   description: "Tell us where you’d love to help — we’ll follow up.",

@@ -1,13 +1,21 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "./schema";
-import type { Answers } from "@/lib/forms/schema";
+import type {
+  Answers,
+  Contact,
+  FormDefinition,
+} from "@/lib/forms/schema";
 import type { Submission } from "./schema";
 
 export type StoredSubmission = {
   id: string;
   formSlug: string;
+  formSchemaVersion: number;
+  formVersion: number;
+  formSnapshotJson: FormDefinition | null;
   answersJson: Answers;
+  contactJson: Contact | null;
   email: string | null;
   name: string | null;
   phone: string | null;
@@ -72,7 +80,11 @@ export async function findSubmissionByIdempotencyKey(
 
 export async function insertSubmission(input: {
   formSlug: string;
+  formSchemaVersion: number;
+  formVersion: number;
+  formSnapshot: FormDefinition;
   answers: Answers;
+  contact: Contact;
   email: string;
   name: string;
   phone: string;
@@ -85,7 +97,11 @@ export async function insertSubmission(input: {
     const row: StoredSubmission = {
       id: newId(),
       formSlug: input.formSlug,
+      formSchemaVersion: input.formSchemaVersion,
+      formVersion: input.formVersion,
+      formSnapshotJson: input.formSnapshot,
       answersJson: input.answers,
+      contactJson: input.contact,
       email: input.email || null,
       name: input.name || null,
       phone: input.phone || null,
@@ -104,7 +120,11 @@ export async function insertSubmission(input: {
     .values({
       formId: input.formSlug,
       formSlug: input.formSlug,
+      formSchemaVersion: input.formSchemaVersion,
+      formVersion: input.formVersion,
+      formSnapshotJson: input.formSnapshot,
       answersJson: input.answers,
+      contactJson: input.contact,
       email: input.email || null,
       name: input.name || null,
       phone: input.phone || null,
@@ -197,7 +217,11 @@ function mapRow(row: Submission): StoredSubmission {
   return {
     id: row.id,
     formSlug: row.formSlug,
+    formSchemaVersion: row.formSchemaVersion,
+    formVersion: row.formVersion,
+    formSnapshotJson: (row.formSnapshotJson as FormDefinition | null) ?? null,
     answersJson: row.answersJson as Answers,
+    contactJson: (row.contactJson as Contact | null) ?? null,
     email: row.email,
     name: row.name,
     phone: row.phone,

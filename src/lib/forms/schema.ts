@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+/**
+ * Engine contract version for FormDefinition.
+ * Bump when the Zod shape / role semantics change in a breaking way.
+ */
+export const FORM_SCHEMA_VERSION = 1 as const;
+
 /** Semantic roles — how the engine maps answers to contact / CRM / email. */
 export const fieldRoleSchema = z.enum([
   "first_name",
@@ -82,6 +88,13 @@ export const formPcoSchema = z.object({
 });
 
 export const formDefinitionSchema = z.object({
+  /** Engine contract version — must match FORM_SCHEMA_VERSION for this app build. */
+  schemaVersion: z.literal(FORM_SCHEMA_VERSION).default(FORM_SCHEMA_VERSION),
+  /**
+   * Content revision for this form. Bump when steps/copy/integrations change
+   * in a way that affects how answers should be interpreted.
+   */
+  version: z.number().int().positive().default(1),
   slug: z.string().min(1),
   title: z.string().min(1),
   description: z.string().optional(),
@@ -110,6 +123,26 @@ export type Contact = {
   phone: string;
   fullName: string;
 };
+
+export const contactSchema = z.object({
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string(),
+  phone: z.string(),
+  fullName: z.string(),
+});
+
+/** Validate + normalize a form definition against the published contract. */
+export function parseFormDefinition(input: unknown): FormDefinition {
+  const form = formDefinitionSchema.parse(input);
+  assertFormWellFormed(form);
+  return form;
+}
+
+/** Immutable snapshot stored with each submission for replay/admin. */
+export function snapshotFormDefinition(form: FormDefinition): FormDefinition {
+  return parseFormDefinition(structuredClone(form));
+}
 
 export function isTextStep(step: Step): step is TextStep {
   return (
@@ -310,6 +343,11 @@ export function interpolate(
 }
 
 export function assertFormWellFormed(form: FormDefinition): void {
+  if (form.schemaVersion !== FORM_SCHEMA_VERSION) {
+    throw new Error(
+      `Form "${form.slug}" schemaVersion ${form.schemaVersion} unsupported (engine is ${FORM_SCHEMA_VERSION})`,
+    );
+  }
   const emailSteps = stepsWithRole(form, "email");
   if (emailSteps.length === 0) {
     throw new Error(

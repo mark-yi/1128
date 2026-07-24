@@ -16,16 +16,23 @@ FormPlayer  →  submitFormAction  →  PCO upsert + ledger + Resend
 
 | Piece | Responsibility |
 |---|---|
-| `src/lib/forms/schema.ts` | Step types, field **roles**, validation, contact/notes extraction |
-| `src/lib/forms/*.ts` | One file per form (copy, steps, success, email, PCO) |
-| `src/lib/forms/registry.ts` | Catalog — add one import line for a new form |
+| `src/lib/forms/schema.ts` | **Published contract** (`FORM_SCHEMA_VERSION`), roles, validation, contact/notes |
+| `src/lib/forms/*.ts` | One file per form (`schemaVersion`, `version`, steps, email, PCO) |
+| `src/lib/forms/registry.ts` | Catalog — parse + register; add one import line for a new form |
 | `src/components/form-player/*` | Typeform-style player (no form-specific branches) |
 | `src/emails/FormFollowUpEmail.tsx` | One email shell; copy from `form.email` |
 | `src/lib/brand.ts` | Org name, service time, colors |
+| Ledger | `submissions` stores `form_version`, `form_snapshot_json`, `contact_json`, `answers_json` |
+
+### Versioning
+
+- `schemaVersion` — engine contract (`FORM_SCHEMA_VERSION = 1`). Bump only for breaking Zod/role changes.
+- `version` — content revision per form. Bump when steps/copy change how answers should be read.
+- Each submission snapshots the full `FormDefinition` + derived `Contact` so admin/replay stay valid after edits.
 
 ### Add a new form
 
-1. Create `src/lib/forms/my-form.ts` with a `FormDefinition` (steps + `role`s + `email` + `success` + `pco`)
+1. Create `src/lib/forms/my-form.ts` with a `FormDefinition` (`schemaVersion: 1`, `version: 1`, steps + `role`s + `email` + `success` + `pco`)
 2. Add it to the `catalog` array in `registry.ts`
 3. Done — `/f/my-form` works, home lists it, submit + email use the schema
 

@@ -7,6 +7,7 @@ import {
   extractContact,
   extractNotes,
   formatAnswersForNotes,
+  snapshotFormDefinition,
   stepsWithRole,
   validateStepValue,
   type Answers,
@@ -133,7 +134,11 @@ export async function submitFormAction(raw: {
 
   const submission = await insertSubmission({
     formSlug: form.slug,
+    formSchemaVersion: form.schemaVersion,
+    formVersion: form.version,
+    formSnapshot: snapshotFormDefinition(form),
     answers,
+    contact,
     email: contact.email,
     name: contact.fullName,
     phone: contact.phone,

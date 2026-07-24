@@ -2,6 +2,8 @@ import { brand } from "@/lib/brand";
 import type { FormDefinition } from "./schema";
 
 export const newcomerForm: FormDefinition = {
+  schemaVersion: 1,
+  version: 1,
   slug: "newcomer",
   title: "Newcomer",
   description:
