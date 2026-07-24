@@ -34,11 +34,14 @@ const memory = {
 };
 
 function hasDatabase() {
-  return Boolean(process.env.DATABASE_URL);
+  const url = process.env.DATABASE_URL?.trim();
+  return Boolean(url);
 }
 
 export function getDb() {
-  const url = process.env.DATABASE_URL;
+  // Lazy init only — never call neon() at module scope (breaks `next build`
+  // when DATABASE_URL is missing on first Vercel deploy).
+  const url = process.env.DATABASE_URL?.trim();
   if (!url) return null;
   const sql = neon(url);
   return drizzle(sql, { schema });

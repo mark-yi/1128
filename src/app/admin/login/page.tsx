@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/auth";
 import { loginAdminAction } from "@/actions/admin-auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLoginPage({
   searchParams,
 }: {
