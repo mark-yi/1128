@@ -71,4 +71,24 @@ Admin: allowlisted `ADMIN_EMAILS` + `ADMIN_PASSWORD` (default `1128-admin`).
 | `AUTH_SECRET` | Admin JWT cookie |
 | `ADMIN_PASSWORD` / `ADMIN_EMAILS` | Staff login |
 
-SQL: `drizzle/0000_init.sql` or `npm run db:push`.
+SQL: `drizzle/0000_init.sql` (+ `0001` / `0002` migrations) or `npm run db:push`.
+
+## Planning Center (People + Services SoT)
+
+PCO is the system of record for **people**, **teams**, and **Sunday schedules**. This app is the form front-door + leader UI that writes through to PCO.
+
+| Module | Role |
+|---|---|
+| `src/lib/pco/http.ts` | Auth, throttle (~100/20s), JSON:API helpers |
+| `src/lib/pco/people.ts` | Search / upsert people, emails, notes |
+| `src/lib/pco/services.ts` | Service types, teams, positions, plans, schedule |
+| `src/lib/pco/workflows.ts` | Leader use-cases (roster vs Sunday assign) |
+| `src/lib/pco/mirror.ts` | Optional Postgres read-cache tables |
+| `src/actions/pco-leaders.ts` | Server actions for upcoming leader views |
+
+**Two assignment modes (important):**
+
+1. **Roster** → `PersonTeamPositionAssignment` — standing team membership (“add to Worship”)
+2. **Schedule** → `PlanPerson` via `team_members` — this Sunday’s plan (“serve hospitality next week”)
+
+Set `PCO_APP_ID`, `PCO_SECRET`, and `PCO_SERVICE_TYPE_ID`, then leader actions are ready.
