@@ -1,0 +1,106 @@
+import type { FormDefinition } from "./schema";
+
+export const newcomerForm: FormDefinition = {
+  slug: "newcomer",
+  title: "Newcomer",
+  description: "We’re glad you’re here. A few questions so we can welcome you well.",
+  emailTemplate: "welcome",
+  pco: {
+    source: "Website — Newcomer Form",
+    stage: "Newcomer",
+    workflowName: "Newcomer Follow-up",
+  },
+  success: {
+    title: "You’re in.",
+    body: "We’re so glad you connected. Someone from 1128 will reach out soon — and we’d love to see you this Sunday.",
+    secondary: "Sundays · 11:45 AM · 1601 W La Habra Blvd, La Habra",
+    ctaLabel: "Get directions",
+    ctaHref:
+      "https://maps.google.com/?q=1601+W+La+Habra+Blvd,+La+Habra,+CA+90631",
+  },
+  steps: [
+    {
+      id: "welcome",
+      type: "statement",
+      title: "Welcome to 1128",
+      body: "Come to Me, all who are weary. We’re a community learning to receive, remain, and reflect the love of God. This takes about a minute.",
+    },
+    {
+      id: "first_name",
+      type: "name",
+      title: "What’s your first name?",
+      placeholder: "Type your answer here…",
+      required: true,
+    },
+    {
+      id: "last_name",
+      type: "name",
+      title: "And your last name?",
+      placeholder: "Type your answer here…",
+      required: true,
+    },
+    {
+      id: "email",
+      type: "email",
+      title: "What’s the best email for you?",
+      help: "We’ll use this for a short welcome note — no spam.",
+      placeholder: "name@email.com",
+      required: true,
+    },
+    {
+      id: "phone",
+      type: "phone",
+      title: "Phone number?",
+      help: "Optional, but helpful if email goes quiet.",
+      placeholder: "(555) 555-5555",
+      required: false,
+    },
+    {
+      id: "visit",
+      type: "single_choice",
+      title: "Have you visited 1128 before?",
+      required: true,
+      autoAdvance: true,
+      options: [
+        { value: "first_time", label: "First time" },
+        { value: "a_few", label: "A few times" },
+        { value: "regular", label: "I’ve been coming regularly" },
+      ],
+    },
+    {
+      id: "how_heard",
+      type: "single_choice",
+      title: "How did you hear about us?",
+      required: true,
+      autoAdvance: true,
+      options: [
+        { value: "friend", label: "Friend or family" },
+        { value: "online", label: "Online / social" },
+        { value: "drive_by", label: "Drove or walked by" },
+        { value: "other", label: "Something else" },
+      ],
+    },
+    {
+      id: "interests",
+      type: "multi_choice",
+      title: "What are you most interested in?",
+      help: "Select all that apply.",
+      required: false,
+      options: [
+        { value: "sunday", label: "Sunday worship" },
+        { value: "life_groups", label: "Life groups" },
+        { value: "prayer", label: "House of Prayer" },
+        { value: "serving", label: "Serving / volunteering" },
+        { value: "kids", label: "Kids & family" },
+      ],
+    },
+    {
+      id: "prayer",
+      type: "long_text",
+      title: "Anything we can pray for?",
+      help: "Optional. Shift + Enter for a new line.",
+      placeholder: "Share as much or as little as you’d like…",
+      required: false,
+    },
+  ],
+};

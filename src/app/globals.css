@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #faf8f5;
+  --color-bg-warm: #f3ede7;
+  --color-bg-deep: #ebe4db;
+  --color-text: #2c2c2c;
+  --color-text-soft: #5c564e;
+  --color-muted: #8a8278;
+  --color-placeholder: #b0a89e;
+  --color-accent: #c4a265;
+  --color-accent-dark: #a8873f;
+  --color-white: #ffffff;
+  --color-dark: #1a1a1a;
+  --color-line: #e8e0d5;
+  --color-line-strong: #d8cfc3;
+  --color-danger: #b4483a;
+  --font-display: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-dm-sans), "Segoe UI", sans-serif;
+  --ease-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 35%, white);
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .form-shell {
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(196, 162, 101, 0.16), transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, rgba(243, 237, 231, 0.9), transparent 50%),
+      linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-warm) 100%);
+  }
+
+  .field-shell {
+    border-bottom: 2px solid var(--color-line-strong);
+    transition: border-color 180ms var(--ease-smooth), transform 180ms var(--ease-smooth);
+  }
+
+  .field-shell:focus-within {
+    border-color: var(--color-accent);
+    transform: scale(1.01);
+  }
+
+  .field-input {
+    min-height: 48px;
+    font-size: 16px; /* prevent iOS zoom */
+  }
+
+  .btn-primary {
+    border-radius: 0.35rem;
+    background: var(--color-accent);
+    color: white;
+    transition: background 160ms var(--ease-smooth), transform 160ms var(--ease-smooth);
+  }
+
+  .btn-primary:hover {
+    background: var(--color-accent-dark);
+  }
+
+  .btn-primary:active {
+    transform: translateY(1px);
+  }
+
+  .kbd {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 0.3rem;
+    background: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+    font-family: var(--font-sans);
+  }
+
+  .invalid-glow {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 22%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .field-shell:focus-within {
+    transform: none;
+  }
+}

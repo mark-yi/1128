@@ -1,0 +1,103 @@
+import type { FormDefinition } from "./schema";
+
+export const volunteerForm: FormDefinition = {
+  slug: "volunteer",
+  title: "Serve with us",
+  description: "Tell us where you’d love to help — we’ll follow up.",
+  emailTemplate: "volunteer_thanks",
+  pco: {
+    source: "Website — Volunteer Form",
+    stage: "Volunteer Interest",
+    workflowName: "Volunteer Follow-up",
+  },
+  success: {
+    title: "Thank you for offering to serve.",
+    body: "Your willingness matters. A ministry lead will reach out soon with next steps.",
+    secondary: "Sundays · 11:45 AM · La Habra",
+    ctaLabel: "Back to 1128",
+    ctaHref: "https://www.1128church.org/",
+  },
+  steps: [
+    {
+      id: "welcome",
+      type: "statement",
+      title: "Serve with 1128",
+      body: "We reflect God’s love by serving one another. A few questions and we’ll connect you with the right team.",
+    },
+    {
+      id: "first_name",
+      type: "name",
+      title: "First name?",
+      placeholder: "Type your answer here…",
+      required: true,
+    },
+    {
+      id: "last_name",
+      type: "name",
+      title: "Last name?",
+      placeholder: "Type your answer here…",
+      required: true,
+    },
+    {
+      id: "email",
+      type: "email",
+      title: "Email?",
+      placeholder: "name@email.com",
+      required: true,
+    },
+    {
+      id: "phone",
+      type: "phone",
+      title: "Phone?",
+      placeholder: "(555) 555-5555",
+      required: false,
+    },
+    {
+      id: "areas",
+      type: "multi_choice",
+      title: "Where would you like to serve?",
+      help: "Pick as many as you want.",
+      required: true,
+      options: [
+        { value: "worship", label: "Worship / band" },
+        { value: "production", label: "Production / tech" },
+        { value: "hospitality", label: "Hospitality / welcome" },
+        { value: "kids", label: "Kids ministry" },
+        { value: "prayer", label: "Prayer ministry" },
+        { value: "setup", label: "Setup / teardown" },
+        { value: "other", label: "Wherever there’s need" },
+      ],
+    },
+    {
+      id: "experience",
+      type: "yes_no",
+      title: "Have you served on a church team before?",
+      required: true,
+      autoAdvance: true,
+      options: [
+        { value: "yes", label: "Yes" },
+        { value: "no", label: "Not yet" },
+      ],
+    },
+    {
+      id: "availability",
+      type: "single_choice",
+      title: "When are you usually available?",
+      required: true,
+      autoAdvance: true,
+      options: [
+        { value: "sunday_am", label: "Sunday mornings" },
+        { value: "weekday", label: "Weekdays" },
+        { value: "flexible", label: "Pretty flexible" },
+      ],
+    },
+    {
+      id: "notes",
+      type: "long_text",
+      title: "Anything else we should know?",
+      help: "Gifts, experience, questions — optional.",
+      placeholder: "Type here…",
+      required: false,
+    },
+  ],
+};
