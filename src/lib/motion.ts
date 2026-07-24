@@ -2,16 +2,16 @@ import type { Transition, Variants } from "motion/react";
 
 export type Direction = 1 | -1;
 
+// Duration-based (not spring) so AnimatePresence mode="wait" always settles,
+// including in headless / low-frame environments.
 export const stepTransition: Transition = {
-  type: "spring",
-  stiffness: 380,
-  damping: 34,
-  mass: 0.8,
+  duration: 0.28,
+  ease: [0.22, 1, 0.36, 1],
 };
 
 export const reducedStepTransition: Transition = {
-  duration: 0.15,
-  ease: "easeOut",
+  duration: 0.01,
+  ease: "linear",
 };
 
 export const stepVariants: Variants = {
@@ -50,7 +50,7 @@ export const staggerItem: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 420, damping: 32 },
+    transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
