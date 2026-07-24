@@ -58,7 +58,7 @@ export type PcoPlanTime = {
   planId: string;
   startsAt: string;
   endsAt?: string;
-  timeType?: string; // Service / Rehearsal / Other
+  timeType?: string; // service | rehearsal | other
 };
 
 /** Someone scheduled onto a plan (Sunday volunteer slot). */

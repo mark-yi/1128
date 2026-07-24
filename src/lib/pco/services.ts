@@ -95,26 +95,19 @@ export async function listTeamPositions(
 ): Promise<PcoTeamPosition[]> {
   if (!isPcoConfigured()) return [];
 
-  let rows;
-  try {
-    rows = await pcoListAll<PositionAttrs>(
-      "services",
-      `/teams/${teamId}/team_positions`,
-      { perPage: 100, maxPages: 5 },
-    );
-  } catch {
-    rows = await pcoListAll<PositionAttrs>(
-      "services",
-      `/service_types/${serviceTypeId}/teams/${teamId}/team_positions`,
-      { perPage: 100, maxPages: 5 },
-    );
-  }
+  // Canonical path: /teams/{team_id}/team_positions (also works nested under service type).
+  void serviceTypeId;
+  const rows = await pcoListAll<PositionAttrs>(
+    "services",
+    `/teams/${teamId}/team_positions`,
+    { perPage: 100, maxPages: 5 },
+  );
 
   return rows.map((r) => ({
     id: r.id,
     name: r.attributes.name ?? "Position",
     teamId,
-    sequence: r.attributes.sequence,
+    sequence: r.attributes.sequence ?? undefined,
   }));
 }
 
@@ -146,7 +139,7 @@ export async function listTeamRoster(
       (i) => i.type === "TeamPosition" && i.id === teamPositionId,
     );
     const attrs = personInc?.attributes as
-      | { first_name?: string; last_name?: string; name?: string }
+      | { first_name?: string; last_name?: string; full_name?: string; name?: string }
       | undefined;
 
     return {
@@ -161,6 +154,7 @@ export async function listTeamRoster(
             firstName: attrs?.first_name ?? "",
             lastName: attrs?.last_name ?? "",
             name:
+              attrs?.full_name ||
               attrs?.name ||
               [attrs?.first_name, attrs?.last_name].filter(Boolean).join(" "),
           }
@@ -202,7 +196,7 @@ export async function assignPersonToTeamPosition(input: {
 
 export async function listUpcomingPlans(options?: {
   serviceTypeId?: string;
-  after?: string; // ISO
+  after?: string; // ISO — requires filter=after
   before?: string;
   limit?: number;
 }): Promise<PcoPlan[]> {
@@ -210,12 +204,14 @@ export async function listUpcomingPlans(options?: {
   const st = options?.serviceTypeId || defaultServiceTypeId();
   if (!st) throw new Error("PCO_SERVICE_TYPE_ID is required to list plans");
 
-  const after = options?.after ?? new Date().toISOString();
+  // Live API: filter=future works standalone; filter=after requires companion `after=`.
+  const filter = options?.after ? "after" : options?.before ? "before" : "future";
   const res = await pcoRequest<PcoListResponse<PlanAttrs>>(
     "services",
     `/service_types/${st}/plans${qs({
-      filter: "after",
-      after,
+      filter,
+      after: options?.after,
+      before: options?.before,
       order: "sort_date",
       per_page: options?.limit ?? 10,
       include: "plan_times",

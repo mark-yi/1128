@@ -4,6 +4,7 @@ import {
   pcoListAll,
   pcoRequest,
   qs,
+  type PcoJsonApiResource,
   type PcoListResponse,
   type PcoSingleResponse,
 } from "./http";
@@ -41,6 +42,44 @@ function mapPerson(
   };
 }
 
+function relatedIds(
+  resource: PcoJsonApiResource,
+  relationship: string,
+): string[] {
+  const rel = resource.relationships?.[relationship]?.data;
+  if (!rel) return [];
+  return Array.isArray(rel) ? rel.map((r) => r.id) : [rel.id];
+}
+
+function primaryContact<T extends { primary?: boolean }>(
+  included: Array<PcoJsonApiResource> | undefined,
+  type: string,
+  ids: string[],
+): T | undefined {
+  const rows = ids
+    .map((id) => includedById(included, type, id))
+    .filter(Boolean)
+    .map((r) => r!.attributes as T);
+  return rows.find((r) => r.primary) ?? rows[0];
+}
+
+function contactsForPerson(
+  person: PcoJsonApiResource<PersonAttrs>,
+  included: Array<PcoJsonApiResource> | undefined,
+): { email?: string; phone?: string } {
+  const email = primaryContact<EmailAttrs>(
+    included,
+    "Email",
+    relatedIds(person, "emails"),
+  )?.address;
+  const phone = primaryContact<PhoneAttrs>(
+    included,
+    "PhoneNumber",
+    relatedIds(person, "phone_numbers"),
+  )?.number;
+  return { email, phone };
+}
+
 export { isPcoConfigured };
 
 export async function searchPeople(query: string, limit = 25): Promise<PcoPerson[]> {
@@ -55,25 +94,8 @@ export async function searchPeople(query: string, limit = 25): Promise<PcoPerson
   );
 
   return (res.data ?? []).map((person) => {
-    const email = (res.included ?? []).find(
-      (item) =>
-        item.type === "Email" &&
-        // relationship matching is imperfect without deep links; take primary-ish
-        true,
-    ) as { attributes?: EmailAttrs } | undefined;
-
-    // Prefer emails related via included when possible — fall back to first email in included set filtered by person later if needed
-    const emails = (res.included ?? []).filter((i) => i.type === "Email");
-    const phones = (res.included ?? []).filter((i) => i.type === "PhoneNumber");
-    const primaryEmail =
-      (emails.find((e) => (e.attributes as EmailAttrs)?.primary)?.attributes as EmailAttrs)
-        ?.address ?? (emails[0]?.attributes as EmailAttrs | undefined)?.address;
-    const primaryPhone =
-      (phones.find((p) => (p.attributes as PhoneAttrs)?.primary)?.attributes as PhoneAttrs)
-        ?.number ?? (phones[0]?.attributes as PhoneAttrs | undefined)?.number;
-
-    void email;
-    return mapPerson(person, primaryEmail, primaryPhone);
+    const { email, phone } = contactsForPerson(person, res.included);
+    return mapPerson(person, email, phone);
   });
 }
 
@@ -85,16 +107,8 @@ export async function getPerson(personId: string): Promise<PcoPerson | null> {
   );
   if (!res.data) return null;
 
-  const emails = (res.included ?? []).filter((i) => i.type === "Email");
-  const phones = (res.included ?? []).filter((i) => i.type === "PhoneNumber");
-  const primaryEmail =
-    (emails.find((e) => (e.attributes as EmailAttrs)?.primary)?.attributes as EmailAttrs)
-      ?.address ?? (emails[0]?.attributes as EmailAttrs | undefined)?.address;
-  const primaryPhone =
-    (phones.find((p) => (p.attributes as PhoneAttrs)?.primary)?.attributes as PhoneAttrs)
-      ?.number ?? (phones[0]?.attributes as PhoneAttrs | undefined)?.number;
-
-  return mapPerson(res.data, primaryEmail, primaryPhone);
+  const { email, phone } = contactsForPerson(res.data, res.included);
+  return mapPerson(res.data, email, phone);
 }
 
 export async function findPersonByEmail(email: string): Promise<PcoPerson | null> {
@@ -214,6 +228,21 @@ export async function upsertPerson(input: UpsertPersonInput): Promise<{
   return { personId, created: true, mocked: false };
 }
 
+/** Live API requires note_category_id (422 without it). */
+async function resolveNoteCategoryId(): Promise<string | null> {
+  const fromEnv = process.env.PCO_NOTE_CATEGORY_ID?.trim();
+  if (fromEnv) return fromEnv;
+
+  const res = await pcoRequest<
+    PcoListResponse<{ name?: string }>
+  >("people", `/note_categories${qs({ per_page: 100 })}`);
+  const rows = res.data ?? [];
+  const general = rows.find(
+    (r) => (r.attributes.name ?? "").toLowerCase() === "general",
+  );
+  return general?.id ?? rows[0]?.id ?? null;
+}
+
 async function createPersonNote(
   personId: string,
   source: string,
@@ -221,6 +250,12 @@ async function createPersonNote(
   notes: string,
 ) {
   try {
+    const noteCategoryId = await resolveNoteCategoryId();
+    if (!noteCategoryId) {
+      console.warn("[pco] note create skipped: no note category available");
+      return;
+    }
+
     await pcoRequest("people", `/people/${personId}/notes`, {
       method: "POST",
       body: JSON.stringify({
@@ -228,6 +263,7 @@ async function createPersonNote(
           type: "Note",
           attributes: {
             note: `[${source} / ${stage}]\n${notes}`,
+            note_category_id: noteCategoryId,
           },
         },
       }),
@@ -260,17 +296,8 @@ export async function listPeople(options?: {
   );
 
   return (res.data ?? []).map((person) => {
-    const emailRel = person.relationships?.emails?.data;
-    const emailIds = Array.isArray(emailRel)
-      ? emailRel.map((r) => r.id)
-      : emailRel
-        ? [emailRel.id]
-        : [];
-    const email =
-      emailIds
-        .map((id) => includedById(res.included, "Email", id))
-        .find(Boolean)?.attributes as EmailAttrs | undefined;
-    return mapPerson(person, email?.address);
+    const { email, phone } = contactsForPerson(person, res.included);
+    return mapPerson(person, email, phone);
   });
 }
 
