@@ -88,7 +88,10 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
   const progress = (index + 1) / total;
   const questionNumber = index + 1;
 
-  const value = answers[step.id] ?? (step.type === "multi_choice" ? [] : "");
+  const value = useMemo(
+    () => answers[step.id] ?? (step.type === "multi_choice" ? [] : ""),
+    [answers, step.id, step.type],
+  );
 
   const variants = reduced ? reducedStepVariants : stepVariants;
   const transition = reduced ? reducedStepTransition : stepTransition;
