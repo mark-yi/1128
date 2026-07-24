@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import type { TextStep } from "@/lib/forms/schema";
+import { resolveRole, type TextStep } from "@/lib/forms/schema";
 
 export function TextField({
   step,
@@ -16,6 +16,8 @@ export function TextField({
 }) {
   const shared =
     "field-input w-full bg-transparent text-[1.15rem] text-[var(--color-text)] outline-none placeholder:text-[var(--color-placeholder)] sm:text-[1.35rem]";
+
+  const role = resolveRole(step);
 
   if (step.type === "long_text") {
     return (
@@ -34,28 +36,31 @@ export function TextField({
   }
 
   const inputMode =
-    step.type === "email"
+    step.type === "email" || role === "email"
       ? "email"
-      : step.type === "phone"
+      : step.type === "phone" || role === "phone"
         ? "tel"
         : "text";
 
   const autoComplete =
-    step.type === "email"
+    step.autoComplete ||
+    (role === "email"
       ? "email"
-      : step.type === "phone"
+      : role === "phone"
         ? "tel"
-        : step.type === "name" || step.id.includes("name")
-          ? step.id.includes("last")
-            ? "family-name"
-            : "given-name"
-          : "off";
+        : role === "last_name"
+          ? "family-name"
+          : role === "first_name"
+            ? "given-name"
+            : role === "full_name"
+              ? "name"
+              : "off");
 
   return (
     <motion.div layout className="field-shell">
       <input
         ref={inputRef as React.RefObject<HTMLInputElement>}
-        type={step.type === "email" ? "email" : "text"}
+        type={step.type === "email" || role === "email" ? "email" : "text"}
         inputMode={inputMode}
         autoComplete={autoComplete}
         value={value}

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAdminSession } from "@/lib/auth";
+import { brand } from "@/lib/brand";
+import { listForms } from "@/lib/forms/registry";
 import { listSubmissions, isUsingMemoryStore } from "@/lib/db";
 import { pcoPersonUrl } from "@/lib/pco/client";
 import { logoutAdminAction } from "@/actions/admin-auth";
@@ -12,13 +14,14 @@ export default async function AdminPage() {
   if (!session) redirect("/admin/login");
 
   const submissions = await listSubmissions(100);
+  const firstForm = listForms()[0];
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)] px-5 py-10 sm:px-8">
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="font-display text-2xl text-[var(--color-accent-dark)]">1128</p>
+            <p className="font-display text-2xl text-[var(--color-accent-dark)]">{brand.name}</p>
             <h1 className="mt-1 font-display text-3xl text-[var(--color-text)]">
               Submissions
             </h1>
@@ -55,11 +58,20 @@ export default async function AdminPage() {
               {submissions.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-[var(--color-muted)]">
-                    No submissions yet. Try{" "}
-                    <Link href="/f/newcomer" className="underline underline-offset-4">
-                      /f/newcomer
-                    </Link>
-                    .
+                    No submissions yet.
+                    {firstForm ? (
+                      <>
+                        {" "}
+                        Try{" "}
+                        <Link
+                          href={`/f/${firstForm.slug}`}
+                          className="underline underline-offset-4"
+                        >
+                          /f/{firstForm.slug}
+                        </Link>
+                        .
+                      </>
+                    ) : null}
                   </td>
                 </tr>
               ) : (

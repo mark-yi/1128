@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import { brand } from "@/lib/brand";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -17,11 +18,10 @@ const sans = DM_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "1128 Forms",
-    template: "%s · 1128",
+    default: `${brand.name} Forms`,
+    template: `%s · ${brand.name}`,
   },
-  description:
-    "Typeform-quality forms for 1128 Church — newcomers, volunteers, and follow-up.",
+  description: `Typeform-quality forms for ${brand.legalName} — capture, Planning Center, and follow-up.`,
 };
 
 export default function RootLayout({

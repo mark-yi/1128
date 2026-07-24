@@ -1,21 +1,35 @@
+import { brand } from "@/lib/brand";
 import type { FormDefinition } from "./schema";
 
 export const volunteerForm: FormDefinition = {
   slug: "volunteer",
   title: "Serve with us",
   description: "Tell us where you’d love to help — we’ll follow up.",
-  emailTemplate: "volunteer_thanks",
+  active: true,
   pco: {
     source: "Website — Volunteer Form",
     stage: "Volunteer Interest",
-    workflowName: "Volunteer Follow-up",
+    includeAnswers: true,
   },
   success: {
-    title: "Thank you for offering to serve.",
+    title: "Thank you for offering to serve",
     body: "Your willingness matters. A ministry lead will reach out soon with next steps.",
-    secondary: "Sundays · 11:45 AM · La Habra",
+    secondary: `${brand.service.when} · La Habra`,
     ctaLabel: "Back to 1128",
-    ctaHref: "https://www.1128church.org/",
+    ctaHref: brand.siteUrl,
+    personalizeWithName: true,
+  },
+  email: {
+    subject: "Thanks for offering to serve at 1128",
+    preview: "Thanks for offering to serve at 1128.",
+    heading: "Thank you, {{firstName}}.",
+    body: [
+      "We’re grateful you want to serve with us. A ministry lead will follow up soon with next steps and how to get plugged in.",
+      "Until then — come worship with us Sunday at 11:45 AM.",
+    ],
+    ctaLabel: "Visit 1128",
+    ctaHref: brand.siteUrl,
+    footer: `${brand.legalName} · La Habra, CA`,
   },
   steps: [
     {
@@ -27,6 +41,7 @@ export const volunteerForm: FormDefinition = {
     {
       id: "first_name",
       type: "name",
+      role: "first_name",
       title: "First name?",
       placeholder: "Type your answer here…",
       required: true,
@@ -34,6 +49,7 @@ export const volunteerForm: FormDefinition = {
     {
       id: "last_name",
       type: "name",
+      role: "last_name",
       title: "Last name?",
       placeholder: "Type your answer here…",
       required: true,
@@ -41,6 +57,7 @@ export const volunteerForm: FormDefinition = {
     {
       id: "email",
       type: "email",
+      role: "email",
       title: "Email?",
       placeholder: "name@email.com",
       required: true,
@@ -48,6 +65,7 @@ export const volunteerForm: FormDefinition = {
     {
       id: "phone",
       type: "phone",
+      role: "phone",
       title: "Phone?",
       placeholder: "(555) 555-5555",
       required: false,
@@ -94,6 +112,7 @@ export const volunteerForm: FormDefinition = {
     {
       id: "notes",
       type: "long_text",
+      role: "notes",
       title: "Anything else we should know?",
       help: "Gifts, experience, questions — optional.",
       placeholder: "Type here…",

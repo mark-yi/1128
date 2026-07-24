@@ -3,7 +3,14 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getForm } from "@/lib/forms/registry";
-import { extractContact, validateStepValue, type Answers } from "@/lib/forms/schema";
+import {
+  extractContact,
+  extractNotes,
+  formatAnswersForNotes,
+  stepsWithRole,
+  validateStepValue,
+  type Answers,
+} from "@/lib/forms/schema";
 import {
   findSubmissionByIdempotencyKey,
   insertEmailEvent,
@@ -22,7 +29,11 @@ const payloadSchema = z.object({
 });
 
 export type SubmitResult =
-  | { ok: true; submissionId: string; mocked: { pco: boolean; email: boolean; db: boolean } }
+  | {
+      ok: true;
+      submissionId: string;
+      mocked: { pco: boolean; email: boolean; db: boolean };
+    }
   | { ok: false; error: string };
 
 export async function submitFormAction(raw: {
@@ -36,9 +47,12 @@ export async function submitFormAction(raw: {
     return { ok: false, error: "Invalid submission" };
   }
 
-  // honeypot
   if (parsed.data.website) {
-    return { ok: true, submissionId: "ignored", mocked: { pco: true, email: true, db: true } };
+    return {
+      ok: true,
+      submissionId: "ignored",
+      mocked: { pco: true, email: true, db: true },
+    };
   }
 
   const hdrs = await headers();
@@ -48,7 +62,10 @@ export async function submitFormAction(raw: {
     "unknown";
   const limited = rateLimit(`submit:${ip}:${parsed.data.slug}`, 10, 60_000);
   if (!limited.ok) {
-    return { ok: false, error: `Too many submissions. Try again in ${limited.retryAfterSec}s.` };
+    return {
+      ok: false,
+      error: `Too many submissions. Try again in ${limited.retryAfterSec}s.`,
+    };
   }
 
   const form = getForm(parsed.data.slug);
@@ -63,7 +80,9 @@ export async function submitFormAction(raw: {
     }
   }
 
-  const existing = await findSubmissionByIdempotencyKey(parsed.data.idempotencyKey);
+  const existing = await findSubmissionByIdempotencyKey(
+    parsed.data.idempotencyKey,
+  );
   if (existing) {
     return {
       ok: true,
@@ -72,17 +91,19 @@ export async function submitFormAction(raw: {
     };
   }
 
-  const contact = extractContact(answers);
-  if (!contact.email) {
+  const contact = extractContact(form, answers);
+  const emailRequired = stepsWithRole(form, "email").some(
+    (step) => step.required !== false,
+  );
+  if (emailRequired && !contact.email) {
     return { ok: false, error: "Email is required" };
   }
 
-  const prayer =
-    typeof answers.prayer === "string"
-      ? answers.prayer
-      : typeof answers.notes === "string"
-        ? answers.notes
-        : "";
+  const notes = extractNotes(form, answers);
+  const answerSummary =
+    form.pco.includeAnswers === false
+      ? ""
+      : formatAnswersForNotes(form, answers);
 
   let pcoPersonId: string | null = null;
   let pcoMocked = true;
@@ -96,18 +117,18 @@ export async function submitFormAction(raw: {
       source: form.pco.source,
       stage: form.pco.stage,
       notes: [
-        `Form: ${form.slug}`,
-        prayer ? `Prayer/notes: ${prayer}` : null,
-        `Answers: ${JSON.stringify(answers)}`,
+        `Form: ${form.title} (${form.slug})`,
+        `Stage: ${form.pco.stage}`,
+        notes ? `Notes:\n${notes}` : null,
+        answerSummary ? `Answers:\n${answerSummary}` : null,
       ]
         .filter(Boolean)
-        .join("\n"),
+        .join("\n\n"),
     });
     pcoPersonId = pco.personId;
     pcoMocked = pco.mocked;
   } catch (err) {
     console.error("[submit] PCO upsert failed", err);
-    // Continue — still capture submission locally
   }
 
   const submission = await insertSubmission({
@@ -121,26 +142,37 @@ export async function submitFormAction(raw: {
     idempotencyKey: parsed.data.idempotencyKey,
   });
 
-  const emailResult = await sendFollowUpEmail({
-    template: form.emailTemplate,
-    to: contact.email,
-    firstName: contact.firstName || contact.fullName,
-  });
+  let emailMocked = true;
+  if (contact.email) {
+    const emailResult = await sendFollowUpEmail({
+      form,
+      to: contact.email,
+      firstName: contact.firstName || contact.fullName,
+      fullName: contact.fullName,
+      email: contact.email,
+    });
 
-  await insertEmailEvent({
-    submissionId: submission.id,
-    template: form.emailTemplate,
-    resendId: emailResult.id,
-    status: emailResult.error ? "error" : emailResult.mocked ? "mocked" : "sent",
-    error: emailResult.error ?? null,
-  });
+    emailMocked = emailResult.mocked;
+
+    await insertEmailEvent({
+      submissionId: submission.id,
+      template: form.slug,
+      resendId: emailResult.id,
+      status: emailResult.error
+        ? "error"
+        : emailResult.mocked
+          ? "mocked"
+          : "sent",
+      error: emailResult.error ?? null,
+    });
+  }
 
   return {
     ok: true,
     submissionId: submission.id,
     mocked: {
       pco: pcoMocked,
-      email: emailResult.mocked,
+      email: emailMocked,
       db: isUsingMemoryStore(),
     },
   };

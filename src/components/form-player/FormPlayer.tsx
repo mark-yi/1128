@@ -31,6 +31,7 @@ import {
   type FormDefinition,
   type Step,
 } from "@/lib/forms/schema";
+import { brand } from "@/lib/brand";
 import { ProgressBar } from "./ProgressBar";
 import { QuestionHeader } from "./QuestionHeader";
 import { FooterActions } from "./FooterActions";
@@ -70,6 +71,12 @@ function letterForIndex(index: number) {
   return String.fromCharCode(65 + index);
 }
 
+function newIdempotencyKey(slug: string) {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${slug}-${Date.now()}`;
+}
+
 export function FormPlayer({ form }: { form: FormDefinition }) {
   const reduced = usePrefersReducedMotion();
   const [index, setIndex] = useState(0);
@@ -79,7 +86,9 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
   const [shakeKey, setShakeKey] = useState(0);
   const [phase, setPhase] = useState<Phase>("playing");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [honeypot, setHoneypot] = useState("");
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const idempotencyKey = useRef(newIdempotencyKey(form.slug));
   const formId = useId();
 
   const steps = form.steps;
@@ -126,29 +135,31 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
     setShakeKey((k) => k + 1);
   }, []);
 
-  const submit = useCallback(async () => {
-    setPhase("submitting");
-    setSubmitError(null);
-    try {
-      const result = await submitFormAction({
-        slug: form.slug,
-        answers,
-        idempotencyKey:
-          typeof crypto !== "undefined" && "randomUUID" in crypto
-            ? crypto.randomUUID()
-            : `${form.slug}-${Date.now()}`,
-      });
-      if (!result.ok) {
-        setSubmitError(result.error);
+  const submit = useCallback(
+    async (answersOverride?: Answers) => {
+      const payload = answersOverride ?? answers;
+      setPhase("submitting");
+      setSubmitError(null);
+      try {
+        const result = await submitFormAction({
+          slug: form.slug,
+          answers: payload,
+          idempotencyKey: idempotencyKey.current,
+          website: honeypot,
+        });
+        if (!result.ok) {
+          setSubmitError(result.error);
+          setPhase("error");
+          return;
+        }
+        setPhase("success");
+      } catch {
+        setSubmitError("Something went wrong. Please try again.");
         setPhase("error");
-        return;
       }
-      setPhase("success");
-    } catch {
-      setSubmitError("Something went wrong. Please try again.");
-      setPhase("error");
-    }
-  }, [answers, form.slug]);
+    },
+    [answers, form.slug, honeypot],
+  );
 
   const advance = useCallback(async () => {
     if (phase !== "playing") return;
@@ -172,39 +183,19 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
 
   const onSelectSingle = useCallback(
     async (optionValue: string, autoAdvance?: boolean) => {
-      setValue(optionValue);
-      if (autoAdvance) {
-        // slight beat so selection highlight registers
-        await new Promise((r) => setTimeout(r, reduced ? 0 : 180));
-        if (index >= total - 1) {
-          const nextAnswers = { ...answers, [step.id]: optionValue };
-          setAnswers(nextAnswers);
-          setPhase("submitting");
-          try {
-            const result = await submitFormAction({
-              slug: form.slug,
-              answers: nextAnswers,
-              idempotencyKey:
-                typeof crypto !== "undefined" && "randomUUID" in crypto
-                  ? crypto.randomUUID()
-                  : `${form.slug}-${Date.now()}`,
-            });
-            if (!result.ok) {
-              setSubmitError(result.error);
-              setPhase("error");
-              return;
-            }
-            setPhase("success");
-          } catch {
-            setSubmitError("Something went wrong. Please try again.");
-            setPhase("error");
-          }
-          return;
-        }
-        goTo(index + 1, 1);
+      const nextAnswers = { ...answers, [step.id]: optionValue };
+      setAnswers(nextAnswers);
+      setError(null);
+      if (!autoAdvance) return;
+
+      await new Promise((r) => setTimeout(r, reduced ? 0 : 180));
+      if (index >= total - 1) {
+        await submit(nextAnswers);
+        return;
       }
+      goTo(index + 1, 1);
     },
-    [answers, form.slug, goTo, index, reduced, setValue, step.id, total],
+    [answers, goTo, index, reduced, step.id, submit, total],
   );
 
   useEffect(() => {
@@ -216,9 +207,6 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
         tag === "input" || tag === "textarea" || target?.isContentEditable;
 
       if (event.key === "Enter" && !event.shiftKey) {
-        if (step.type === "long_text" && isField) {
-          // Shift+Enter newline; plain Enter advances
-        }
         event.preventDefault();
         void advance();
         return;
@@ -274,10 +262,15 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [advance, back, onSelectSingle, phase, setValue, step, value]);
 
-  const contact = useMemo(() => extractContact(answers), [answers]);
+  const contact = useMemo(
+    () => extractContact(form, answers),
+    [answers, form],
+  );
 
   if (phase === "success") {
-    return <SuccessScreen form={form} name={contact.firstName || contact.fullName} />;
+    return (
+      <SuccessScreen form={form} name={contact.firstName || contact.fullName} />
+    );
   }
 
   return (
@@ -287,7 +280,7 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
       <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between px-5 pb-2 pt-[max(1rem,env(safe-area-inset-top))] sm:px-8">
         <div className="pointer-events-auto">
           <p className="font-display text-[1.35rem] font-medium tracking-tight text-[var(--color-text)] sm:text-2xl">
-            1128
+            {brand.name}
           </p>
           <p className="mt-0.5 text-xs tracking-[0.14em] text-[var(--color-muted)] uppercase">
             {form.title}
@@ -302,6 +295,17 @@ export function FormPlayer({ form }: { form: FormDefinition }) {
           {total}
         </p>
       </header>
+
+      {/* Honeypot — hidden from humans */}
+      <label className="sr-only" aria-hidden tabIndex={-1}>
+        Website
+        <input
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+        />
+      </label>
 
       <main className="relative flex flex-1 items-center px-5 pb-28 pt-28 sm:px-8 sm:pt-32">
         <div className="mx-auto w-full max-w-xl">

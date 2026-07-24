@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { brand } from "@/lib/brand";
 import type { FormDefinition } from "@/lib/forms/schema";
 
 export function SuccessScreen({
@@ -11,6 +12,10 @@ export function SuccessScreen({
   name: string;
 }) {
   const reduced = useReducedMotion();
+  const personalize = form.success.personalizeWithName !== false && name;
+  const title = personalize
+    ? `${form.success.title.replace(/\.$/, "")}, ${name}.`
+    : form.success.title;
 
   return (
     <div className="form-shell flex min-h-dvh flex-col items-center justify-center px-5 py-16 sm:px-8">
@@ -46,7 +51,7 @@ export function SuccessScreen({
           transition={{ delay: 0.12 }}
           className="font-display text-[1.35rem] text-[var(--color-accent-dark)]"
         >
-          1128
+          {brand.name}
         </motion.p>
 
         <motion.h1
@@ -55,7 +60,7 @@ export function SuccessScreen({
           transition={{ delay: 0.18 }}
           className="mt-3 font-display text-[2rem] leading-tight font-medium tracking-[-0.02em] text-[var(--color-text)] text-balance sm:text-[2.6rem]"
         >
-          {name ? `${form.success.title.replace(/\.$/, "")}, ${name}.` : form.success.title}
+          {title}
         </motion.h1>
 
         <motion.p
@@ -85,7 +90,10 @@ export function SuccessScreen({
             transition={{ delay: 0.4 }}
             className="mt-10"
           >
-            <a href={form.success.ctaHref} className="btn-primary inline-flex min-h-12 items-center px-6">
+            <a
+              href={form.success.ctaHref}
+              className="btn-primary inline-flex min-h-12 items-center px-6"
+            >
               {form.success.ctaLabel}
             </a>
           </motion.div>

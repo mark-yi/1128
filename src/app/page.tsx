@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { brand } from "@/lib/brand";
 import { listForms } from "@/lib/forms/registry";
 
 export default function HomePage() {
@@ -8,7 +9,7 @@ export default function HomePage() {
     <div className="form-shell min-h-dvh px-5 py-16 sm:px-8">
       <div className="mx-auto max-w-2xl">
         <p className="font-display text-3xl text-[var(--color-accent-dark)] sm:text-4xl">
-          1128
+          {brand.name}
         </p>
         <h1 className="mt-4 font-display text-[2.4rem] leading-[1.1] font-medium tracking-[-0.02em] text-[var(--color-text)] sm:text-5xl">
           Forms that feel like Sunday hospitality.

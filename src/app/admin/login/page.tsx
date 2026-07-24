@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/auth";
+import { brand } from "@/lib/brand";
 import { loginAdminAction } from "@/actions/admin-auth";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export default async function AdminLoginPage({
         action={loginAdminAction}
         className="w-full max-w-md border border-[var(--color-line)] bg-white/70 p-8"
       >
-        <p className="font-display text-2xl text-[var(--color-accent-dark)]">1128</p>
+        <p className="font-display text-2xl text-[var(--color-accent-dark)]">{brand.name}</p>
         <h1 className="mt-2 font-display text-3xl text-[var(--color-text)]">Staff login</h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
           Allowlisted email + shared admin password.

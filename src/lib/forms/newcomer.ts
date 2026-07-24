@@ -1,22 +1,36 @@
+import { brand } from "@/lib/brand";
 import type { FormDefinition } from "./schema";
 
 export const newcomerForm: FormDefinition = {
   slug: "newcomer",
   title: "Newcomer",
-  description: "We’re glad you’re here. A few questions so we can welcome you well.",
-  emailTemplate: "welcome",
+  description:
+    "We’re glad you’re here. A few questions so we can welcome you well.",
+  active: true,
   pco: {
     source: "Website — Newcomer Form",
     stage: "Newcomer",
-    workflowName: "Newcomer Follow-up",
+    includeAnswers: true,
   },
   success: {
-    title: "You’re in.",
+    title: "You’re in",
     body: "We’re so glad you connected. Someone from 1128 will reach out soon — and we’d love to see you this Sunday.",
-    secondary: "Sundays · 11:45 AM · 1601 W La Habra Blvd, La Habra",
+    secondary: `${brand.service.when} · ${brand.service.where}`,
     ctaLabel: "Get directions",
-    ctaHref:
-      "https://maps.google.com/?q=1601+W+La+Habra+Blvd,+La+Habra,+CA+90631",
+    ctaHref: brand.service.mapsUrl,
+    personalizeWithName: true,
+  },
+  email: {
+    subject: "Welcome to 1128 — we’re glad you’re here",
+    preview: "Welcome to 1128 — we’d love to see you Sunday.",
+    heading: "{{firstName}}, we’re glad you’re here.",
+    body: [
+      "Thanks for connecting with 1128. We’re a community of people learning to receive, remain, and reflect the love of God — and there’s a place for you.",
+      "Someone from our team may reach out soon. If you have a question in the meantime, just reply to this email.",
+    ],
+    ctaLabel: "Get directions",
+    ctaHref: brand.service.mapsUrl,
+    footer: `${brand.legalName} · La Habra, CA`,
   },
   steps: [
     {
@@ -28,6 +42,7 @@ export const newcomerForm: FormDefinition = {
     {
       id: "first_name",
       type: "name",
+      role: "first_name",
       title: "What’s your first name?",
       placeholder: "Type your answer here…",
       required: true,
@@ -35,6 +50,7 @@ export const newcomerForm: FormDefinition = {
     {
       id: "last_name",
       type: "name",
+      role: "last_name",
       title: "And your last name?",
       placeholder: "Type your answer here…",
       required: true,
@@ -42,6 +58,7 @@ export const newcomerForm: FormDefinition = {
     {
       id: "email",
       type: "email",
+      role: "email",
       title: "What’s the best email for you?",
       help: "We’ll use this for a short welcome note — no spam.",
       placeholder: "name@email.com",
@@ -50,6 +67,7 @@ export const newcomerForm: FormDefinition = {
     {
       id: "phone",
       type: "phone",
+      role: "phone",
       title: "Phone number?",
       help: "Optional, but helpful if email goes quiet.",
       placeholder: "(555) 555-5555",
@@ -97,6 +115,7 @@ export const newcomerForm: FormDefinition = {
     {
       id: "prayer",
       type: "long_text",
+      role: "notes",
       title: "Anything we can pray for?",
       help: "Optional. Shift + Enter for a new line.",
       placeholder: "Share as much or as little as you’d like…",
